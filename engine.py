@@ -37,6 +37,41 @@ class Value:
     
     def __truediv__(self, other):
         return self * other**-1
+    
+            
+    def relu(self):
+        out = Value(0 if self.data < 0 else self.data, (self,))
+
+        def _backward():
+            self.grad += (out.data > 0) * out.grad
+        out.backward = _backward
+
+        return out
+    
+    def backprop(self):
+        # self.grad = 1.0
+
+        # def backward_recursion(parent_node):
+        #     parent_node.backward()
+        #     for node in parent_node.prev:
+        #         backward_recursion(node)
+        
+        # backward_recursion(self)
+
+        topo = []
+        visited = set()
+        def build_topo(v):
+            if v not in visited:
+                visited.add(v)
+                for child in v.prev:
+                    build_topo(child)
+                topo.append(v)
+        build_topo(self)
+
+        # go one variable at a time and apply the chain rule to get its gradient
+        self.grad = 1
+        for v in reversed(topo):
+            v.backward()
 
     def __pow__(self, other):
         out = Value(self.data**other, (self,))
@@ -55,22 +90,6 @@ class Value:
 
     def __neg__(self):
         return self * -1
-    
-    def tanh(self):
-        out = Value(math.tanh(self.data), (self,))
 
-        def _backward():
-            self.grad += (1 - math.tanh(self.data)**2) * out.grad
-        out.backward = _backward
-
-        return out
-    
-    def backprop(self):
-        self.grad = 1.0
-
-        def backward_recursion(parent_node):
-            parent_node.backward()
-            for node in parent_node.prev:
-                backward_recursion(node)
-        
-        backward_recursion(self)
+    def __rtruediv__(self, other):
+        return other * self**-1

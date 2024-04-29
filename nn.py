@@ -2,13 +2,14 @@ import random
 from engine import Value
 
 class Neuron:
-    def __init__(self, nin):
+    def __init__(self, nin, nonlin=True):
         self.w = [Value(random.uniform(-1, 1)) for _ in range(nin)]
-        self.b = Value(random.uniform(-1, 1))
+        self.b = Value(0)
+        self.nonlin = nonlin
 
     def __call__(self, x):
         activation = sum( xi*wi for xi, wi in zip(x, self.w)) + self.b
-        return activation.tanh()
+        return activation.relu() if self.nonlin else activation
     
     def parameters(self):
         return self.w + [self.b]
@@ -17,8 +18,8 @@ class Neuron:
         return f"Neuron({len(self.w)})"
     
 class Layer:
-    def __init__(self, nin, nout):
-        self.neurons = [Neuron(nin) for _ in range(nout)]
+    def __init__(self, nin, nout, **kwargs):
+        self.neurons = [Neuron(nin, **kwargs) for _ in range(nout)]
 
     def __call__(self, x):
         outputs = [neuron(x) for neuron in self.neurons]
@@ -33,7 +34,7 @@ class Layer:
 class MLP:
     def __init__(self, nin, nouts):
         mlp = [nin] + nouts
-        self.layers = [Layer(mlp[n], mlp[n+1]) for n in range(len(nouts))]
+        self.layers = [Layer(mlp[n], mlp[n+1], nonlin=n!=len(nouts)-1) for n in range(len(nouts))]
 
     def __call__(self, x):
         for layer in self.layers:
